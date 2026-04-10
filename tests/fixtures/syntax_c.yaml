@@ -1,0 +1,29 @@
+# Fixture — Syntax C (legacy flavorizr v1 — deprecated in v3.x but still seen)
+# Flavor name keys appear directly under the flavor with flat keys (no "app:" wrapper).
+#
+# Expected parse result:
+#   FlavorInfo(name="apple",  app_name="Apple App",  android_application_id="com.example.apple",  ios_bundle_id="com.example.apple")
+#   FlavorInfo(name="banana", app_name="Banana App", android_application_id="com.example.banana", ios_bundle_id="com.example.banana")
+#   FlavorInfo(name="mixed",  app_name=None,          android_application_id="com.example.mixed",  ios_bundle_id=None)
+#     ↑ "mixed" tests a flavor that has no name and no iOS block
+
+flavors:
+  apple:
+    name: "Apple App"       # flat key — no "app:" wrapper
+    android:
+      applicationId: "com.example.apple"
+    ios:
+      bundleId: "com.example.apple"
+
+  banana:
+    name: "Banana App"
+    android:
+      applicationId: "com.example.banana"
+    ios:
+      bundleId: "com.example.banana"
+
+  mixed:
+    # no "name" key — app_name should remain None
+    android:
+      applicationId: "com.example.mixed"
+    # no ios block — ios_bundle_id should remain None

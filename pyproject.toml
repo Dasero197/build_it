@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "build_it"
+version = "0.1.0"
+description = "Flutter multi-flavor build automation CLI — reads flavorizr config and builds all your flavors in one command."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Dayane S. R. Assogba", email = "assogbadayane197@gmail.com" }]
+keywords = ["flutter", "flavorizr", "build", "cli", "dart", "mobile"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Build Tools",
+]
+requires-python = ">=3.14"
+dependencies = [
+    "typer>=0.24.1",
+    "rich>=14.3.3",
+    "pyyaml>=6.0.3",
+    "pydantic>=2.12.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "auto-py-to-exe>=2.50.0",
+    "pyinstaller>=6.6.0",
+    "build>=1.2.0",
+    "twine>=5.0.0",
+]
+
+[project.scripts]
+build_it = "build_it.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/dasero197/build_it"
+Repository = "https://github.com/dasero197/build_it"
+Issues = "https://github.com/dasero197/build_it/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["build_it*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

@@ -1,0 +1,37 @@
+# Fixture — Syntax A (flavorizr v2+, standalone flavorizr.yaml)
+# Most common format: each flavor has an "app:" sub-block.
+#
+# Expected parse result:
+#   FlavorInfo(name="apple",  app_name="Apple App",  android_application_id="com.example.apple",  ios_bundle_id="com.example.apple")
+#   FlavorInfo(name="banana", app_name="Banana App", android_application_id="com.example.banana", ios_bundle_id="com.example.banana")
+#   FlavorInfo(name="cherry", app_name="Cherry App", android_application_id="com.example.cherry", ios_bundle_id=None)
+
+flavors:
+  apple:
+    app:
+      name: "Apple App"
+    android:
+      applicationId: "com.example.apple"
+      resValue:
+        - name: "app_name"
+          type: "string"
+          value: "Apple"
+    ios:
+      bundleId: "com.example.apple"
+    macos:
+      bundleId: "com.example.apple.macos"
+
+  banana:
+    app:
+      name: "Banana App"
+    android:
+      applicationId: "com.example.banana"
+    ios:
+      bundleId: "com.example.banana"
+
+  cherry:
+    app:
+      name: "Cherry App"
+    android:
+      applicationId: "com.example.cherry"
+    # no iOS block → ios_bundle_id should be None

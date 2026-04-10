@@ -1,0 +1,45 @@
+# Fixture — Syntax B (flavorizr config embedded in pubspec.yaml)
+# The flavorizr block lives under the "flavorizr:" key in pubspec.yaml.
+#
+# Expected parse result (same flavors as syntax_a for comparability):
+#   FlavorInfo(name="apple",  app_name="Apple App",  android_application_id="com.example.apple",  ios_bundle_id="com.example.apple")
+#   FlavorInfo(name="banana", app_name="Banana App", android_application_id="com.example.banana", ios_bundle_id="com.example.banana")
+
+name: my_flutter_app
+description: A demo app used in fixtures.
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_flavorizr: ^2.2.0
+
+flutter:
+  uses-material-design: true
+
+# ─── Flavorizr config embedded in pubspec.yaml (Syntax B) ───────────────────
+flavorizr:
+  flavors:
+    apple:
+      app:
+        name: "Apple App"
+      android:
+        applicationId: "com.example.apple"
+      ios:
+        bundleId: "com.example.apple"
+
+    banana:
+      app:
+        name: "Banana App"
+      android:
+        applicationId: "com.example.banana"
+      ios:
+        bundleId: "com.example.banana"

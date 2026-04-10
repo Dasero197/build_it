@@ -1,0 +1,116 @@
+name: Release Suite
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          
+      - name: Run tests with pytest
+        run: pytest tests/ -v
+
+  build-pypi:
+    name: Build & Publish to PyPI
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      - name: Install build tools
+        run: python -m pip install build twine
+        
+      - name: Build sdist and wheel
+        run: python -m build
+        
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+  build-binaries:
+    name: Build binaries (${{ matrix.os }})
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            suffix: ''
+            artifact_name: build_it-linux
+          - os: macos-latest
+            suffix: ''
+            artifact_name: build_it-macos
+          - os: windows-latest
+            suffix: '.exe'
+            artifact_name: build_it-windows.exe
+            
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install build_it
+        run: pip install -e ".[dev]"
+
+      - name: Build binary with PyInstaller
+        run: |
+          pyinstaller --onefile --name build_it --distpath dist_bin --hidden-import "build_it.core.models" --hidden-import "build_it.core.parser" --hidden-import "build_it.core.config" --hidden-import "build_it.core.builder" --hidden-import "build_it.cli.main" --hidden-import "build_it.utils.guards" build_it/cli/main.py
+
+      - name: Rename binary for release
+        run: |
+          mv dist_bin/build_it${{ matrix.suffix }} dist_bin/${{ matrix.artifact_name }}
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}
+          path: dist_bin/${{ matrix.artifact_name }}
+
+  github-release:
+    name: Create GitHub Release
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist_bin
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist_bin/*
+          generate_release_notes: true
