@@ -9,7 +9,7 @@ build_it build --all --parallel
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![PyPI](https://img.shields.io/badge/status-alpha-orange)](https://pypi.org/project/build_it/)
+[![PyPI](https://img.shields.io/badge/status-alpha-orange)](https://pypi.org/project/flutter-build-it/)
 
 ---
 
@@ -53,10 +53,10 @@ build_it build --all --parallel
 
 ```bash
 # Via pipx (recommended — fully isolated global install)
-pipx install build_it
+pipx install flutter-build-it
 
 # Via pip
-pip install build_it
+pip install flutter-build-it
 
 # Development mode (editable install from the cloned repo)
 pip install -e ".[dev]"
