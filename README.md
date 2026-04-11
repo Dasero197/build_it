@@ -69,15 +69,13 @@ If you do not have Python installed, you can download a standalone executable.
 
 **Linux / macOS (One-line installer):**
 ```bash
-# Download the latest binary directly to /usr/local/bin
-sudo curl -L "https://github.com/Dasero197/build_it/releases/latest/download/build_it-$(uname -s | tr '[:upper:]' '[:lower:]')" -o /usr/local/bin/build_it
-sudo chmod +x /usr/local/bin/build_it
+curl -sSL https://raw.githubusercontent.com/Dasero197/build_it/main/scripts/install.sh | sh
 ```
 
 **Windows (PowerShell One-line installer):**
-Open PowerShell as Administrator (or regular user) and run:
+Open PowerShell and run:
 ```powershell
-$d="$env:USERPROFILE\.build_it\bin"; New-Item -ItemType Directory -Force -Path $d; Invoke-WebRequest -Uri "https://github.com/Dasero197/build_it/releases/latest/download/build_it-windows.exe" -OutFile "$d\build_it.exe"; [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$d", "User"); Write-Host "build_it installed successfully! Restart your terminal to use it." -ForegroundColor Green
+irm https://raw.githubusercontent.com/Dasero197/build_it/main/scripts/install.ps1 | iex
 ```
 
 *(Alternatively, for a manual install)*:
