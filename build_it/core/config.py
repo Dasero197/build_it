@@ -81,6 +81,7 @@ from build_it.utils.constants import CONFIG_FILE, PUBSPEC_FILE, REPO_URL
 # Public API
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def load_config(project_root: Path = Path(".")) -> GlobalBuildConfig:
     """
     Load ``.build_it.yaml`` from *project_root* and return the parsed config.
@@ -119,6 +120,7 @@ def load_config(project_root: Path = Path(".")) -> GlobalBuildConfig:
                 raw = yaml.safe_load(f)
         except Exception as exc:
             from rich.console import Console
+
             Console().print(
                 f"[yellow]Warning: could not parse .build_it.yaml: {exc}[/yellow]"
             )
@@ -131,11 +133,12 @@ def load_config(project_root: Path = Path(".")) -> GlobalBuildConfig:
                 raw = result.get("build_it", None) if isinstance(result, dict) else None
         except Exception as exc:
             from rich.console import Console
+
             Console().print(
                 f"[yellow]Warning: could not parse pubspec.yaml: {exc}[/yellow]"
             )
 
-    return _parse_config(raw, project_root) if raw is not None else GlobalBuildConfig(default_targets=[BuildTarget.APK])
+    return _parse_config(raw, project_root) if raw is not None else GlobalBuildConfig()
 
 
 def resolve_dart_defines(
@@ -280,6 +283,7 @@ def generate_default_config(flavor_names: list[str]) -> str:
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _parse_config(raw: dict[str, Any], root: Path) -> GlobalBuildConfig:
     """
     Convert a raw YAML mapping into a :class:`GlobalBuildConfig`.
@@ -301,7 +305,7 @@ def _parse_config(raw: dict[str, Any], root: Path) -> GlobalBuildConfig:
 
     global_cfg = GlobalBuildConfig(
         default_targets=_parse_targets(
-            global_raw.get("targets"), default=[BuildTarget.APK]
+            global_raw.get("targets"), default=BuildTarget.to_list()
         ),
         dart_defines=_parse_defines(global_raw.get("dart_defines")),
         dart_define_files=_parse_defines_files(
@@ -313,8 +317,7 @@ def _parse_config(raw: dict[str, Any], root: Path) -> GlobalBuildConfig:
     for fname, fraw in (flavors_raw or {}).items():
         fraw = fraw or {}
         global_cfg.flavors[fname] = FlavorBuildConfig(
-            targets=_parse_targets(fraw.get("targets"), default=[BuildTarget.APK])
-            or None,
+            targets=_parse_targets(fraw.get("targets"), default=None) or None,
             dart_defines=_parse_defines(fraw.get("dart_defines")),
             dart_define_files=_parse_defines_files(fraw.get("dart_define_files"), root),
             extra_args=_parse_extra_args(fraw.get("extra_args")),

@@ -20,9 +20,8 @@ Parallel mode (``--parallel`` flag)
     * Jobs are grouped by target.
     * Groups execute **concurrently** via ``asyncio.gather``.
     * Jobs **within** the same group run **sequentially** to avoid write
-      conflicts inside the shared build directory.
-    * Every job receives a unique ``--output-dir build/outputs/<flavor>_<target>/``
-      so that artifacts never collide even when two flavors share a target.
+      conflicts inside the shared build directory. Flutter automatically
+      isolates output files by flavor name.
 
 After all jobs finish a Rich summary table is printed showing the status,
 duration, and resolved output directory of each job.
@@ -35,10 +34,6 @@ run_jobs(jobs, parallel, progress_cb, build_type)
 
 print_summary(results)
     Print a Rich-formatted summary table for a completed build session.
-
-assign_parallel_output_dirs(jobs)
-    Inject isolated ``output_dir`` values into every job before parallel
-    execution.
 """
 
 from __future__ import annotations
@@ -56,7 +51,6 @@ from rich.table import Table
 
 from build_it.core.enums import BuildStatus, BuildTarget, BuildType
 from build_it.core.models import BuildJob, BuildResult
-from build_it.utils.constants import SUPPORTS_OUTPUT_DIR
 
 console = Console()
 
@@ -64,6 +58,7 @@ console = Console()
 # ─────────────────────────────────────────────────────────────────────────────
 # Public entry points
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 async def run_jobs(
     jobs: list[BuildJob],
@@ -100,7 +95,7 @@ async def run_jobs(
     return await _run_sequential(jobs, progress_cb, build_type)
 
 
-def print_summary(results: list[BuildResult]) -> None:
+def print_summary(results: list[BuildResult], elapsed_time: float) -> None:
     """
     Print a Rich-formatted summary table after a build session.
 
@@ -121,11 +116,11 @@ def print_summary(results: list[BuildResult]) -> None:
         border_style="dim",
         show_lines=True,
     )
-    table.add_column("Flavor",     style="magenta", no_wrap=True)
-    table.add_column("Target",     style="cyan",    no_wrap=True)
-    table.add_column("Status",     no_wrap=True)
-    table.add_column("Duration",   justify="right", no_wrap=True)
-    table.add_column("Output dir", style="dim",     overflow="fold")
+    table.add_column("Flavor", style="magenta", no_wrap=True)
+    table.add_column("Target", style="cyan", no_wrap=True)
+    table.add_column("Status", no_wrap=True)
+    table.add_column("Duration", justify="right", no_wrap=True)
+    table.add_column("Output dir", style="dim", overflow="fold")
 
     for r in results:
         flavor = r.job.flavor or "—"
@@ -139,54 +134,37 @@ def print_summary(results: list[BuildResult]) -> None:
             status_str = "[red]✗ failed[/red]"
 
         duration = f"{r.duration_seconds:.1f}s"
-        out_dir  = str(r.output_dir) if r.output_dir else "—"
+        out_dir = str(r.output_dir) if r.output_dir else "—"
 
         table.add_row(flavor, target, status_str, duration, out_dir)
 
     console.print()
     console.print(table)
 
-    ok    = sum(1 for r in results if r.status == BuildStatus.SUCCESS)
-    fail  = sum(1 for r in results if r.status == BuildStatus.FAILURE)
-    skip  = sum(1 for r in results if r.status == BuildStatus.SKIPPED)
+    ok = sum(1 for r in results if r.status == BuildStatus.SUCCESS)
+    fail = sum(1 for r in results if r.status == BuildStatus.FAILURE)
+    skip = sum(1 for r in results if r.status == BuildStatus.SKIPPED)
     total = len(results)
 
     parts = [f"[bold]{total}[/bold] jobs"]
-    if ok:   parts.append(f"[green]{ok} succeeded[/green]")
-    if fail: parts.append(f"[red]{fail} failed[/red]")
-    if skip: parts.append(f"[yellow]{skip} skipped[/yellow]")
+    if ok:
+        parts.append(f"[green]{ok} succeeded[/green]")
+    if fail:
+        parts.append(f"[red]{fail} failed[/red]")
+    if skip:
+        parts.append(f"[yellow]{skip} skipped[/yellow]")
+
+    parts.append(
+        f"[green] build exec time: [bold] {int(elapsed_time)}s [/bold] [/green]"
+    )
     console.print("  " + " · ".join(parts))
     console.print()
-
-
-def assign_parallel_output_dirs(jobs: list[BuildJob]) -> None:
-    """
-    Inject an isolated ``--output-dir`` path into every job before parallel
-    execution.
-
-    Without this, Flutter writes all artifacts of the same target type to the
-    same ``build/<target>/`` directory, causing corruption when two jobs run
-    concurrently.
-
-    Path scheme: ``build/outputs/<flavor>_<target>/``
-
-    Parameters
-    ----------
-    jobs:
-        List of :class:`~build_it.core.models.BuildJob` to modify in-place.
-        Only jobs whose target supports ``--output-dir`` (see
-        ``SUPPORTS_OUTPUT_DIR`` in ``utils/constants.py``) will have this
-        path injected into the Flutter command; others receive the path but
-        it is silently ignored during command assembly.
-    """
-    for job in jobs:
-        slug = f"{job.flavor or 'noflavor'}_{job.target.value}"
-        job.output_dir = Path("build") / "outputs" / slug
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Sequential runner
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 async def _run_sequential(
     jobs: list[BuildJob],
@@ -212,6 +190,7 @@ async def _run_sequential(
 # Parallel runner
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 async def _run_parallel(
     jobs: list[BuildJob],
     progress_cb: Optional[Callable[[BuildResult], None]],
@@ -227,15 +206,11 @@ async def _run_parallel(
     The final result list is re-sorted to match the original job order so
     that the summary table is always deterministic.
     """
-    # Assign isolated output dirs before grouping so every job has its own
-    # directory, even if two jobs share the same target.
-    for job in jobs:
-        job.output_dir = _resolve_output_dir(job)
 
-    # Group by target value so same-target jobs always stay sequential
+    # Group by toolchain / platform so same-platform jobs stay sequential
     groups: dict[str, list[BuildJob]] = defaultdict(list)
     for job in jobs:
-        groups[job.target.value].append(job)
+        groups[job.target.platform_group()].append(job)
 
     all_results: list[BuildResult] = []
     results_lock = asyncio.Lock()
@@ -261,6 +236,7 @@ async def _run_parallel(
 # Single job executor
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 async def _execute_job(
     job: BuildJob,
     build_type: Optional[BuildType] = BuildType.RELEASE,
@@ -271,8 +247,9 @@ async def _execute_job(
 
     Handles the following cases:
 
-    * **Platform guard** — iOS and macOS targets are skipped with status
-      ``SKIPPED`` on non-macOS hosts.
+    * **Platform guard** — iOS/macOS targets require macOS, Windows targets
+      require Windows, and Linux targets require Linux. Otherwise, they are
+      skipped with status ``SKIPPED``.
     * **Success** — process exits with code 0.
     * **Failure** — process exits with a non-zero code; last 1 200 chars of
       stdout/stderr are printed for diagnosis.
@@ -292,11 +269,25 @@ async def _execute_job(
         Populated with status, duration, output directory, and any error
         information.
     """
-    # ── OS guard for iOS / macOS ──────────────────────────────────────────────
+    # ── OS guards ─────────────────────────────────────────────────────────────
     if job.target in (BuildTarget.IOS, BuildTarget.MACOS) and sys.platform != "darwin":
         console.print(
             f"[yellow]⊘ Skipped {job.label}[/yellow] — "
             f"{job.target.value} builds require macOS (current: {sys.platform})"
+        )
+        return BuildResult(job=job, status=BuildStatus.SKIPPED)
+
+    if job.target == BuildTarget.WINDOWS and sys.platform != "win32":
+        console.print(
+            f"[yellow]⊘ Skipped {job.label}[/yellow] — "
+            f"windows builds require Windows (current: {sys.platform})"
+        )
+        return BuildResult(job=job, status=BuildStatus.SKIPPED)
+
+    if job.target == BuildTarget.LINUX and not sys.platform.startswith("linux"):
+        console.print(
+            f"[yellow]⊘ Skipped {job.label}[/yellow] — "
+            f"linux builds require Linux (current: {sys.platform})"
         )
         return BuildResult(job=job, status=BuildStatus.SKIPPED)
 
@@ -313,8 +304,7 @@ async def _execute_job(
         stdout, stderr = await proc.communicate()
         elapsed = time.monotonic() - start
 
-        # The output dir may have been set earlier (parallel mode); recompute
-        # here as a fallback for sequential mode.
+        # Determine the expected output directory for the summary table.
         out_dir = _resolve_output_dir(job)
 
         if proc.returncode == 0:
@@ -365,6 +355,7 @@ async def _execute_job(
 # Command assembly
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _build_command(
     job: BuildJob,
     build_type: Optional[BuildType] = BuildType.RELEASE,
@@ -393,10 +384,6 @@ def _build_command(
     if job.entry_point:
         cmd += ["--target", str(job.entry_point)]
 
-    # Only inject --output-dir for targets that support the flag
-    if job.output_dir and job.target.value in SUPPORTS_OUTPUT_DIR:
-        cmd += ["--output-dir", str(job.output_dir)]
-
     # Dart-define arguments (already fully resolved and merged)
     cmd.extend(job.dart_define.to_cli_args())
 
@@ -410,35 +397,18 @@ def _build_command(
 # Output directory resolution
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _resolve_output_dir(job: BuildJob) -> Path:
     """
     Return the resolved output directory for *job*.
-
-    If ``job.output_dir`` is already set (parallel mode pre-sets it via
-    :func:`assign_parallel_output_dirs`) it is returned as-is.
-    Otherwise the standard Flutter build-output path is constructed using
-    the target's :meth:`~build_it.core.enums.BuildTarget.output_subdir`.
-
-    Parameters
-    ----------
-    job:
-        The build job to resolve the output directory for.
-
-    Returns
-    -------
-    Path
-        Relative path from the Flutter project root to the output directory.
     """
-    if job.output_dir:
-        return job.output_dir
-
-    flavor_part = f"/{job.flavor}" if job.flavor else ""
-    return Path("build") / job.target.output_subdir() / flavor_part.lstrip("/")
+    return Path("build") / job.target.output_subdir() / (job.flavor or "")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Error extraction
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _extract_error(stderr: str) -> Optional[str]:
     """

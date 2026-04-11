@@ -10,7 +10,7 @@ library or from ``build_it.utils.constants``.
 Modules
 -------
 constants
-    Project-wide constants: ``BUILD_TARGET_MAP``, ``SUPPORTS_OUTPUT_DIR``,
+    Project-wide constants: ``BUILD_TARGET_MAP``,
     ``FLAVORIZR_FILE``, ``PUBSPEC_FILE``, ``CONFIG_FILE``, ``REPO_URL``.
     No intra-package imports — safe as an import root.
 

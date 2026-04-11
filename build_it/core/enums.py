@@ -78,6 +78,20 @@ class BuildTarget(str, Enum):
         """Return all ``BuildTarget`` members as an ordered list."""
         return list(BuildTarget._member_map_.values())
 
+    def platform_group(self) -> str:
+        """
+        Return the underlying build toolchain / platform for this target.
+
+        Used to safely group concurrent builds. Targets sharing the same
+        toolchain (like APK and AppBundle both using Gradle) must run
+        sequentially to avoid file locks and thrashing.
+        """
+        if self in (BuildTarget.APK, BuildTarget.APPBUNDLE):
+            return "android"
+        if self in (BuildTarget.IOS, BuildTarget.MACOS):
+            return "apple"
+        return self.value
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Build status

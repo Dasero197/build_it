@@ -51,15 +51,57 @@ build_it build --all --parallel
 
 ## Installation
 
+You can install `build_it` as a Python package, download a prebuilt binary, or build it from source.
+
+### 🐍 Method 1: Python Package (Recommended)
+If you have Python 3.10+ installed, you can use `pip`:
+
 ```bash
 # Via pipx (recommended — fully isolated global install)
 pipx install flutter-build-it
 
 # Via pip
 pip install flutter-build-it
+```
 
-# Development mode (editable install from the cloned repo)
+### ⚡ Method 2: Standalone Binaries (No Python required)
+If you do not have Python installed, you can download a standalone executable.
+
+**Linux / macOS (One-line installer):**
+```bash
+# Download the latest binary directly to /usr/local/bin
+sudo curl -L "https://github.com/Dasero197/build_it/releases/latest/download/build_it-$(uname -s | tr '[:upper:]' '[:lower:]')" -o /usr/local/bin/build_it
+sudo chmod +x /usr/local/bin/build_it
+```
+
+**Windows (PowerShell One-line installer):**
+Open PowerShell as Administrator (or regular user) and run:
+```powershell
+$d="$env:USERPROFILE\.build_it\bin"; New-Item -ItemType Directory -Force -Path $d; Invoke-WebRequest -Uri "https://github.com/Dasero197/build_it/releases/latest/download/build_it-windows.exe" -OutFile "$d\build_it.exe"; [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$d", "User"); Write-Host "build_it installed successfully! Restart your terminal to use it." -ForegroundColor Green
+```
+
+*(Alternatively, for a manual install)*:
+1. Download `build_it-windows.exe` from the [Latest GitHub Release](https://github.com/Dasero197/build_it/releases/latest).
+2. Rename it to `build_it.exe`.
+3. Place it in a custom folder (e.g., `C:\build_it`)
+4. Add that folder to your system's `PATH` variable: Open Start > "Environment Variables" > Select "Path" > Edit > Add `C:\build_it`.
+
+### 🛠️ Method 3: Build from source
+You can manually build the standalone executable on your machine using PyInstaller.
+
+```bash
+# Clone the repository
+git clone https://github.com/Dasero197/build_it.git
+cd build_it
+
+# Install dependencies and build tools
 pip install -e ".[dev]"
+pip install pyinstaller
+
+# Build the executable
+pyinstaller --onefile --name build_it --hidden-import "build_it.core.models" --hidden-import "build_it.core.parser" --hidden-import "build_it.core.config" --hidden-import "build_it.core.builder" --hidden-import "build_it.cli.main" --hidden-import "build_it.utils.guards" build_it/cli/main.py
+
+# Your binary will be ready in the dist/ folder!
 ```
 
 ---
@@ -143,7 +185,7 @@ For **files**, all sources are concatenated: global → flavor → CLI.
 |---|---|
 | Multiple flavors, **same target** | Sequential — prevents `build/` directory corruption |
 | Multiple flavors, **different targets** | Parallel automatically suggested |
-| `--parallel` flag | Forced parallel — each job gets an isolated `--output-dir build/outputs/<flavor>_<target>/` |
+| `--parallel` flag | Forced parallel mode |
 
 Output directories are printed in the summary table at the end of every build.
 
@@ -176,15 +218,15 @@ Output directories are printed in the summary table at the end of every build.
 
 ## Supported targets
 
-| Value | Flutter command | Supports `--output-dir` |
-|---|---|---|
-| `apk` | `flutter build apk` | ✓ |
-| `appbundle` | `flutter build appbundle` | ✓ |
-| `ios` | `flutter build ipa` | ✓ |
-| `web` | `flutter build web` | ✓ |
-| `macos` | `flutter build macos` | — |
-| `windows` | `flutter build windows` | — |
-| `linux` | `flutter build linux` | — |
+| Value | Flutter command |
+|---|---|
+| `apk` | `flutter build apk` |
+| `appbundle` | `flutter build appbundle` |
+| `ios` | `flutter build ipa` |
+| `web` | `flutter build web` |
+| `macos` | `flutter build macos` |
+| `windows` | `flutter build windows` |
+| `linux` | `flutter build linux` |
 
 > **Note** — iOS and macOS builds require macOS.  They are automatically
 > skipped with status `⊘ skipped` on Linux and Windows hosts.

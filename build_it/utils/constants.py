@@ -13,9 +13,6 @@ BUILD_TARGET_MAP
     Maps each build-target string value to the relative path inside
     ``build/`` where Flutter writes the compiled artifact.
 
-SUPPORTS_OUTPUT_DIR
-    Set of target string values that accept Flutter's ``--output-dir`` flag.
-
 FLAVORIZR_FILE
     Default filename for a standalone flavorizr configuration file.
 
@@ -54,20 +51,6 @@ BUILD_TARGET_MAP: Dict[str, str] = {
 """
 Mapping of build-target value → default Flutter output sub-directory
 (relative to the project root ``build/`` directory).
-"""
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Targets that support --output-dir
-# ─────────────────────────────────────────────────────────────────────────────
-
-SUPPORTS_OUTPUT_DIR: set[str] = {"apk", "appbundle", "ios", "web"}
-"""
-Set of build-target string values whose ``flutter build`` command accepts
-the ``--output-dir`` flag.
-
-Desktop targets (macos, windows, linux) do not support this flag as of
-Flutter 3.x; jobs targeting them will have their ``output_dir`` field
-ignored during command assembly.
 """
 
 # ─────────────────────────────────────────────────────────────────────────────

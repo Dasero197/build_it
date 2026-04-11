@@ -37,6 +37,7 @@ SYNTAX_C = FIXTURES / "syntax_c.yaml"
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _make_flutter_project(tmp: Path, extra_files: dict[str, str] | None = None) -> Path:
     """
     Create a minimal Flutter project directory in *tmp*.
@@ -46,10 +47,7 @@ def _make_flutter_project(tmp: Path, extra_files: dict[str, str] | None = None) 
     """
     pubspec = tmp / "pubspec.yaml"
     pubspec.write_text(
-        "name: test_app\n"
-        "dependencies:\n"
-        "  flutter:\n"
-        "    sdk: flutter\n",
+        "name: test_app\ndependencies:\n  flutter:\n    sdk: flutter\n",
         encoding="utf-8",
     )
     for rel_path, content in (extra_files or {}).items():
@@ -62,6 +60,7 @@ def _make_flutter_project(tmp: Path, extra_files: dict[str, str] | None = None) 
 # ─────────────────────────────────────────────────────────────────────────────
 # Parser — Syntax A  (standalone flavorizr.yaml, v2+ app: wrapper)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestParserSyntaxA:
     """Tests against tests/fixtures/syntax_a.yaml."""
@@ -108,6 +107,7 @@ class TestParserSyntaxA:
 # Parser — Syntax B  (flavorizr: embedded in pubspec.yaml)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestParserSyntaxB:
     """Tests against tests/fixtures/syntax_b.yaml (used as pubspec.yaml)."""
 
@@ -132,6 +132,7 @@ class TestParserSyntaxB:
 # ─────────────────────────────────────────────────────────────────────────────
 # Parser — Syntax C  (legacy v1 flat keys)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestParserSyntaxC:
     """Tests against tests/fixtures/syntax_c.yaml."""
@@ -162,8 +163,8 @@ class TestParserSyntaxC:
 # Parser — Edge cases
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestParserEdgeCases:
 
+class TestParserEdgeCases:
     def test_no_flavorizr_returns_empty(self, tmp_path: Path) -> None:
         """A Flutter project with no flavorizr config → empty list, no error."""
         _make_flutter_project(tmp_path)
@@ -192,12 +193,13 @@ class TestParserEdgeCases:
 # Config — load_config()
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestLoadConfig:
 
+class TestLoadConfig:
     def test_missing_file_returns_defaults(self, tmp_path: Path) -> None:
         cfg = load_config(tmp_path)
         assert isinstance(cfg, GlobalBuildConfig)
-        assert cfg.default_targets == [BuildTarget.APK]
+        assert cfg.default_targets == BuildTarget.to_list()
+        assert cfg.dart_defines == {}
 
     def test_global_targets_parsed(self, tmp_path: Path) -> None:
         content = "global:\n  targets: [apk, web]\n"
@@ -207,16 +209,11 @@ class TestLoadConfig:
 
     def test_load_from_pubspec_fallback(self, tmp_path: Path) -> None:
         """Loads configuration from pubspec.yaml if .build_it.yaml is absent."""
-        content = (
-            "name: test_app\n"
-            "build_it:\n"
-            "  global:\n"
-            "    targets: [ios, web]\n"
-        )
+        content = "name: test_app\nbuild_it:\n  global:\n    targets: [ios, web]\n"
         (tmp_path / "pubspec.yaml").write_text(content, encoding="utf-8")
         # Ensure .build_it.yaml does not exist
         assert not (tmp_path / ".build_it.yaml").exists()
-        
+
         cfg = load_config(tmp_path)
         assert cfg.default_targets == [BuildTarget.IOS, BuildTarget.WEB]
 
@@ -224,7 +221,10 @@ class TestLoadConfig:
         content = "global:\n  dart_defines:\n    ENV: production\n    API: https://api.example.com\n"
         (tmp_path / ".build_it.yaml").write_text(content, encoding="utf-8")
         cfg = load_config(tmp_path)
-        assert cfg.dart_defines == {"ENV": "production", "API": "https://api.example.com"}
+        assert cfg.dart_defines == {
+            "ENV": "production",
+            "API": "https://api.example.com",
+        }
 
     def test_flavor_override_parsed(self, tmp_path: Path) -> None:
         content = (
@@ -248,8 +248,8 @@ class TestLoadConfig:
 # Config — resolve_dart_defines()  (priority merge)
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestResolveDartDefines:
 
+class TestResolveDartDefines:
     def _make_global(self, defines: dict = {}, files: list = []) -> GlobalBuildConfig:
         return GlobalBuildConfig(dart_defines=defines, dart_define_files=files)
 
@@ -260,6 +260,7 @@ class TestResolveDartDefines:
 
     def test_flavor_wins_over_global(self, tmp_path: Path) -> None:
         from build_it.core.models import FlavorBuildConfig
+
         gcfg = self._make_global({"KEY": "global"})
         fcfg = FlavorBuildConfig(dart_defines={"KEY": "flavor"})
         result = resolve_dart_defines(gcfg, fcfg, {}, [])
@@ -267,6 +268,7 @@ class TestResolveDartDefines:
 
     def test_cli_wins_over_flavor(self, tmp_path: Path) -> None:
         from build_it.core.models import FlavorBuildConfig
+
         gcfg = self._make_global({"KEY": "global"})
         fcfg = FlavorBuildConfig(dart_defines={"KEY": "flavor"})
         result = resolve_dart_defines(gcfg, fcfg, {"KEY": "cli"}, [])
@@ -279,11 +281,12 @@ class TestResolveDartDefines:
 
     def test_files_concatenated_in_order(self, tmp_path: Path) -> None:
         from build_it.core.models import FlavorBuildConfig
+
         g_file = tmp_path / "global.json"
         f_file = tmp_path / "flavor.json"
         c_file = tmp_path / "cli.json"
-        gcfg   = self._make_global(files=[g_file])
-        fcfg   = FlavorBuildConfig(dart_define_files=[f_file])
+        gcfg = self._make_global(files=[g_file])
+        fcfg = FlavorBuildConfig(dart_define_files=[f_file])
         result = resolve_dart_defines(gcfg, fcfg, {}, [c_file])
         assert result.define_files == [g_file, f_file, c_file]
 
@@ -292,13 +295,14 @@ class TestResolveDartDefines:
 # Config — resolve_targets()
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestResolveTargets:
 
+class TestResolveTargets:
     def _make_global(self, targets: list[BuildTarget] = None) -> GlobalBuildConfig:
         return GlobalBuildConfig(default_targets=targets or [BuildTarget.APK])
 
     def test_cli_target_overrides_all(self) -> None:
         from build_it.core.models import FlavorBuildConfig
+
         gcfg = self._make_global([BuildTarget.APK])
         fcfg = FlavorBuildConfig(targets=[BuildTarget.APPBUNDLE])
         result = resolve_targets(gcfg, fcfg, BuildTarget.WEB)
@@ -306,6 +310,7 @@ class TestResolveTargets:
 
     def test_flavor_target_overrides_global(self) -> None:
         from build_it.core.models import FlavorBuildConfig
+
         gcfg = self._make_global([BuildTarget.APK])
         fcfg = FlavorBuildConfig(targets=[BuildTarget.APPBUNDLE, BuildTarget.IOS])
         result = resolve_targets(gcfg, fcfg, None)
@@ -321,8 +326,8 @@ class TestResolveTargets:
 # Config — generate_default_config()
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestGenerateDefaultConfig:
 
+class TestGenerateDefaultConfig:
     def test_output_is_valid_yaml(self) -> None:
         content = generate_default_config(["apple", "banana"])
         parsed = yaml.safe_load(content)

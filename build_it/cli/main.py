@@ -31,17 +31,17 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+import time
 from typing import Annotated, Optional
 
 import typer
-from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm
 from rich.table import Table
 
 from build_it import __version__
 from build_it.core.builder import (
-    assign_parallel_output_dirs,
+    console,
     print_summary,
     run_jobs,
 )
@@ -52,12 +52,11 @@ from build_it.core.config import (
     resolve_targets,
 )
 from build_it.core.enums import BuildTarget, BuildType
-from build_it.core.models import BuildJob
+from build_it.core.models import BuildJob, BuildResult
 from build_it.core.parser import load_flavors
 from build_it.utils.guards import require_flutter_project
 from build_it.utils.utils import has_flutter_project
 
-console = Console()
 
 app = typer.Typer(
     name="build_it",
@@ -70,6 +69,7 @@ app = typer.Typer(
 # ─────────────────────────────────────────────────────────────────────────────
 # Global callback — version flag
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def version_callback(value: bool) -> None:
     """Print the installed version and exit when ``--version`` is passed."""
@@ -92,6 +92,7 @@ def version(
 # list
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @app.command(name="list")
 def list_cmd() -> None:
     """
@@ -105,7 +106,7 @@ def list_cmd() -> None:
     """
     require_flutter_project()
     flavors = load_flavors()
-    cfg     = load_config()
+    cfg = load_config()
 
     if not flavors:
         console.print(
@@ -120,16 +121,16 @@ def list_cmd() -> None:
         border_style="dim",
         show_lines=True,
     )
-    table.add_column("Flavor",                style="magenta", no_wrap=True)
-    table.add_column("App name",              style="cyan")
-    table.add_column("Android ID",            style="dim")
-    table.add_column("Targets",               style="green")
+    table.add_column("Flavor", style="magenta", no_wrap=True)
+    table.add_column("App name", style="cyan")
+    table.add_column("Android ID", style="dim")
+    table.add_column("Targets", style="green")
     table.add_column("Dart defines (merged)", overflow="fold")
 
     for fi in flavors:
-        flavor_cfg  = cfg.flavors.get(fi.name)
-        targets     = resolve_targets(cfg, flavor_cfg, None)
-        dd          = resolve_dart_defines(cfg, flavor_cfg, {}, [])
+        flavor_cfg = cfg.flavors.get(fi.name)
+        targets = resolve_targets(cfg, flavor_cfg, None)
+        dd = resolve_dart_defines(cfg, flavor_cfg, {}, [])
 
         defines_str = ", ".join(f"{k}={v}" for k, v in dd.defines.items()) or "—"
         if dd.define_files:
@@ -162,15 +163,20 @@ def list_cmd() -> None:
 # build
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @app.command(name="build")
 def build_cmd(
     flavor: Annotated[
         Optional[str],
-        typer.Option("--flavor", "-f", help="Flavor name to build.  Omit to build all."),
+        typer.Option(
+            "--flavor", "-f", help="Flavor name to build.  Omit to build all."
+        ),
     ] = None,
     target: Annotated[
         Optional[BuildTarget],
-        typer.Option("--target", "-t", help="Override build target (apk, appbundle, ios, web…)."),
+        typer.Option(
+            "--target", "-t", help="Override build target (apk, appbundle, ios, web…)."
+        ),
     ] = None,
     all_flavors: Annotated[
         bool,
@@ -178,24 +184,34 @@ def build_cmd(
     ] = False,
     parallel: Annotated[
         bool,
-        typer.Option("--parallel", "-p", help="Run builds in parallel across different targets."),
+        typer.Option(
+            "--parallel", "-p", help="Run builds in parallel across different targets."
+        ),
     ] = False,
     dart_define: Annotated[
         Optional[list[str]],
-        typer.Option("--dart-define", "-D", help="Extra KEY=VALUE dart define (repeatable)."),
+        typer.Option(
+            "--dart-define", "-D", help="Extra KEY=VALUE dart define (repeatable)."
+        ),
     ] = None,
     dart_define_file: Annotated[
         Optional[list[Path]],
-        typer.Option("--dart-define-from-file", "-F", help="Extra dart-define JSON file (repeatable)."),
+        typer.Option(
+            "--dart-define-from-file",
+            "-F",
+            help="Extra dart-define JSON file (repeatable).",
+        ),
     ] = None,
+    build_type: Annotated[
+        Optional[BuildType],
+        typer.Option(
+            "--type", "-T", help="Build mode: release (default), profile, or debug."
+        ),
+    ] = BuildType.RELEASE,
     yes: Annotated[
         bool,
         typer.Option("--yes", "-y", help="Skip the confirmation prompt."),
     ] = False,
-    build_type: Annotated[
-        Optional[BuildType],
-        typer.Option("--type", "-T", help="Build mode: release (default), profile, or debug."),
-    ] = BuildType.RELEASE,
 ) -> None:
     """
     Build one flavor, all flavors, or a no-flavor project.
@@ -217,10 +233,10 @@ def build_cmd(
     """
     require_flutter_project()
 
-    cfg         = load_config()
-    flavors     = load_flavors()
+    cfg = load_config()
+    flavors = load_flavors()
     cli_defines = _parse_cli_defines(dart_define or [])
-    cli_files   = dart_define_file or []
+    cli_files = dart_define_file or []
 
     # ── Determine which flavors to build ─────────────────────────────────────
     if not flavors:
@@ -239,8 +255,8 @@ def build_cmd(
     jobs: list[BuildJob] = []
     for fname in flavor_names:
         flavor_cfg = cfg.flavors.get(fname) if fname else None
-        targets    = resolve_targets(cfg, flavor_cfg, target)
-        dd         = resolve_dart_defines(cfg, flavor_cfg, cli_defines, cli_files)
+        targets = resolve_targets(cfg, flavor_cfg, target)
+        dd = resolve_dart_defines(cfg, flavor_cfg, cli_defines, cli_files)
 
         # Merge extra_args: global first, then flavor-specific on top
         extra = list(cfg.extra_args)
@@ -277,14 +293,42 @@ def build_cmd(
     if not yes and not Confirm.ask("Proceed?", default=True):
         raise typer.Exit()
 
-    # ── Inject isolated output dirs for parallel mode ─────────────────────────
-    if parallel:
-        assign_parallel_output_dirs(jobs)
-
     # ── Execute ───────────────────────────────────────────────────────────────
     console.print()
-    results = asyncio.run(run_jobs(jobs, parallel=parallel, build_type=build_type))
-    print_summary(results)
+    completed = 0
+    total = len(jobs)
+    detailled_count = {target: 0 for target in BuildTarget.to_list()}
+    build_start = time.monotonic()
+
+    with console.status(
+        f"[bold green]Building ({completed}/{total})...[/bold green]", spinner="dots"
+    ) as status:
+
+        def on_progress(result: BuildResult):
+            nonlocal completed
+
+            detailled_count[result.job.target] += 1
+            completed += 1
+
+            targets_status = " | ".join(
+                [
+                    f"{t.value}: {detailled_count[t]}"
+                    for t in [k for k, v in detailled_count.items() if v > 0]
+                ]
+            )
+            display_text = f"[bold green]Building ({completed}/{total})...[/bold green] [dim] {targets_status} [/dim]"
+            status.update(display_text)
+
+        results = asyncio.run(
+            run_jobs(
+                jobs,
+                parallel=parallel,
+                build_type=build_type,
+                progress_cb=on_progress,
+            )
+        )
+    elapsed_time = time.monotonic() - build_start
+    print_summary(results, elapsed_time)
 
     # Exit with code 1 when at least one job failed
     if any(r.status.value == "failure" for r in results):
@@ -294,6 +338,7 @@ def build_cmd(
 # ─────────────────────────────────────────────────────────────────────────────
 # init
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @app.command(name="init")
 def init_cmd(
@@ -337,6 +382,7 @@ def init_cmd(
 # info
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @app.command(name="info")
 def info_cmd() -> None:
     """
@@ -349,7 +395,7 @@ def info_cmd() -> None:
     * Whether a ``.build_it.yaml`` config file is present.
     """
     is_flutter = has_flutter_project()
-    flavors    = load_flavors() if is_flutter else []
+    flavors = load_flavors() if is_flutter else []
     cfg_exists = Path(".build_it.yaml").exists()
 
     console.print(
@@ -368,6 +414,7 @@ def info_cmd() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _parse_cli_defines(raw: list[str]) -> dict[str, str]:
     """
@@ -417,7 +464,7 @@ def _print_job_plan(jobs: list[BuildJob], parallel: bool) -> None:
     console.print(f"\n[bold]{len(jobs)} job(s)[/bold] — {mode}\n")
     for job in jobs:
         dd_count = len(job.dart_define.defines) + len(job.dart_define.define_files)
-        suffix   = f"  [dim]+{dd_count} dart-define(s)[/dim]" if dd_count else ""
+        suffix = f"  [dim]+{dd_count} dart-define(s)[/dim]" if dd_count else ""
         console.print(f"  • {job.label}{suffix}")
     console.print()
 
@@ -425,6 +472,7 @@ def _print_job_plan(jobs: list[BuildJob], parallel: bool) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def main() -> None:
     """Invoke the Typer application.  Called by the ``build_it`` script entry point."""

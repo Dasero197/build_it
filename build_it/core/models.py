@@ -222,9 +222,6 @@ class BuildJob(BaseModel):
         Additional raw CLI arguments appended to the ``flutter build`` call.
     entry_point:
         Optional custom Dart entry-point (``--target``).
-    output_dir:
-        When set (parallel mode), passed as ``--output-dir`` to prevent
-        build-directory collisions between concurrent jobs.
     """
 
     flavor: Optional[str]
@@ -232,10 +229,6 @@ class BuildJob(BaseModel):
     dart_define: DartDefineConfig = Field(default_factory=DartDefineConfig)
     extra_args: list[str] = Field(default_factory=list)
     entry_point: Optional[Path] = None
-    # Populated by assign_parallel_output_dirs() before parallel execution
-    # to give each job its own isolated output directory, avoiding Flutter's
-    # build/ directory corruption when two jobs share the same target.
-    output_dir: Optional[Path] = None
 
     @property
     def label(self) -> str:
