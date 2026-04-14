@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "flutter-build-it"
-version = "0.1.3"
+version = "0.1.4"
 description = "Flutter multi-flavor build automation CLI — reads flavorizr config and builds all your flavors in one command."
 readme = "README.md"
 license = { text = "MIT" }
