@@ -42,8 +42,8 @@ import asyncio
 import sys
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
 
 from rich.console import Console
 from rich.panel import Panel
@@ -63,8 +63,8 @@ console = Console()
 async def run_jobs(
     jobs: list[BuildJob],
     parallel: bool = False,
-    progress_cb: Optional[Callable[[BuildResult], None]] = None,
-    build_type: Optional[BuildType] = BuildType.RELEASE,
+    progress_cb: Callable[[BuildResult], None] | None = None,
+    build_type: BuildType | None = BuildType.RELEASE,
 ) -> list[BuildResult]:
     """
     Execute *jobs* and return one :class:`~build_it.core.models.BuildResult`
@@ -168,8 +168,8 @@ def print_summary(results: list[BuildResult], elapsed_time: float) -> None:
 
 async def _run_sequential(
     jobs: list[BuildJob],
-    progress_cb: Optional[Callable[[BuildResult], None]],
-    build_type: Optional[BuildType] = BuildType.RELEASE,
+    progress_cb: Callable[[BuildResult], None] | None,
+    build_type: BuildType | None = BuildType.RELEASE,
 ) -> list[BuildResult]:
     """
     Execute *jobs* one after the other in the order given.
@@ -193,8 +193,8 @@ async def _run_sequential(
 
 async def _run_parallel(
     jobs: list[BuildJob],
-    progress_cb: Optional[Callable[[BuildResult], None]],
-    build_type: Optional[BuildType] = BuildType.RELEASE,
+    progress_cb: Callable[[BuildResult], None] | None,
+    build_type: BuildType | None = BuildType.RELEASE,
 ) -> list[BuildResult]:
     """
     Execute *jobs* concurrently, grouped by target.
@@ -239,7 +239,7 @@ async def _run_parallel(
 
 async def _execute_job(
     job: BuildJob,
-    build_type: Optional[BuildType] = BuildType.RELEASE,
+    build_type: BuildType | None = BuildType.RELEASE,
 ) -> BuildResult:
     """
     Run a single ``flutter build`` subprocess for *job* and return a
@@ -358,7 +358,7 @@ async def _execute_job(
 
 def _build_command(
     job: BuildJob,
-    build_type: Optional[BuildType] = BuildType.RELEASE,
+    build_type: BuildType | None = BuildType.RELEASE,
 ) -> list[str]:
     """
     Assemble the full ``flutter build …`` command for *job*.
@@ -383,6 +383,14 @@ def _build_command(
 
     if job.entry_point:
         cmd += ["--target", str(job.entry_point)]
+
+    if job.obfuscate:
+        version = (job.flutter_project_version or "default_version").split("+")[0]
+        symbol_path = Path(
+            f"build/{job.target.symbols_output_subdir()}/{f'{version}/{job.flavor}' if job.flavor else version}"
+        )
+
+        cmd += ["--obfuscate", f"--split-debug-info={symbol_path}"]
 
     # Dart-define arguments (already fully resolved and merged)
     cmd.extend(job.dart_define.to_cli_args())
@@ -410,7 +418,7 @@ def _resolve_output_dir(job: BuildJob) -> Path:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _extract_error(stderr: str) -> Optional[str]:
+def _extract_error(stderr: str) -> str | None:
     """
     Return the last meaningful error line from Flutter's ``stderr`` output.
 

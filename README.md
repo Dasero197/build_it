@@ -54,11 +54,11 @@ build_it build --all --parallel
 You can install `build_it` as a Python package, download a prebuilt binary, or build it from source.
 
 ### 🐍 Method 1: Python Package (Recommended)
-If you have Python 3.10+ installed, you can use `pip`:
+If you have Python 3.10+ installed, you can use `uv`:
 
 ```bash
-# Via pipx (recommended — fully isolated global install)
-pipx install flutter-build-it
+# Via uv tool (recommended — fully isolated global install)
+uv tool install flutter-build-it
 
 # Via pip
 pip install flutter-build-it
@@ -92,12 +92,11 @@ You can manually build the standalone executable on your machine using PyInstall
 git clone https://github.com/Dasero197/build_it.git
 cd build_it
 
-# Install dependencies and build tools
-pip install -e ".[dev]"
-pip install pyinstaller
+# Sync dependencies and dev tools (pyinstaller should be in the dev extra)
+uv sync --extra dev
 
 # Build the executable
-pyinstaller --onefile --name build_it --hidden-import "build_it.core.models" --hidden-import "build_it.core.parser" --hidden-import "build_it.core.config" --hidden-import "build_it.core.builder" --hidden-import "build_it.cli.main" --hidden-import "build_it.utils.guards" build_it/cli/main.py
+uv run pyinstaller --onefile --name build_it --hidden-import "build_it.core.models" --hidden-import "build_it.core.parser" --hidden-import "build_it.core.config" --hidden-import "build_it.core.builder" --hidden-import "build_it.cli.main" --hidden-import "build_it.utils.guards" build_it/cli/main.py
 
 # Your binary will be ready in the dist/ folder!
 ```
@@ -211,6 +210,8 @@ Output directories are printed in the summary table at the end of every build.
 | `--dart-define K=V` | `-D` | Extra dart define, repeatable |
 | `--dart-define-from-file PATH` | `-F` | Extra define file, repeatable |
 | `--yes` | `-y` | Skip confirmation prompt |
+| `--obfuscate` | `-o` | Obfuscate flutter build binaries on supported platforms |
+
 
 ---
 
@@ -268,13 +269,13 @@ build_it/
 ## Development
 
 ```bash
-# Clone and install in editable mode with dev dependencies
+# Clone and sync dependencies (including dev extras) with uv
 git clone https://github.com/dasero197/build_it.git
 cd build_it
-pip install -e ".[dev]"
+uv sync --extra dev
 
 # Run the test suite
-pytest
+uv run pytest
 
 # Build a standalone binary (requires PyInstaller)
 bash scripts/build_binaries.sh
@@ -283,7 +284,7 @@ bash scripts/build_binaries.sh
 ### Running tests
 
 ```
-pytest -v
+uv run pytest -v
 ```
 
 The test suite covers:

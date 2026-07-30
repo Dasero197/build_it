@@ -30,8 +30,6 @@ REPO_URL
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Build-output paths
@@ -39,14 +37,24 @@ from typing import Dict
 
 # Target string values are used here instead of BuildTarget enum members to
 # avoid a circular import (enums.py → constants.py → enums.py).
-BUILD_TARGET_MAP: Dict[str, str] = {
-    "apk":       "app/outputs/flutter-apk",
+BUILD_TARGET_MAP: dict[str, str] = {
+    "apk": "app/outputs/flutter-apk",
     "appbundle": "app/outputs/bundle",
-    "ios":       "ios/ipa",
-    "web":       "web",
-    "macos":     "macos/Build/Products/Release",
-    "windows":   "windows/x64/runner/Release",
-    "linux":     "linux/x64/release/bundle",
+    "ios": "ios/ipa",
+    "web": "web",
+    "macos": "macos/Build/Products/Release",
+    "windows": "windows/x64/runner/Release",
+    "linux": "linux/x64/release/bundle",
+}
+
+SYMBOLS_MAP: dict[str, str] = {
+    "apk": f"{BUILD_TARGET_MAP['apk']}/symbols",
+    "appbundle": f"{BUILD_TARGET_MAP['appbundle']}/symbols",
+    "ios": f"{BUILD_TARGET_MAP['ios']}/symbols",
+    "web": f"{BUILD_TARGET_MAP['web']}/symbols",
+    "macos": f"{BUILD_TARGET_MAP['macos']}/symbols",
+    "windows": f"{BUILD_TARGET_MAP['windows']}/symbols",
+    "linux": f"{BUILD_TARGET_MAP['linux']}/symbols",
 }
 """
 Mapping of build-target value → default Flutter output sub-directory

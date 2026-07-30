@@ -54,12 +54,10 @@ load_flavors(project_root)
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from build_it.core.models import FlavorInfo
 from build_it.utils.constants import FLAVORIZR_FILE, PUBSPEC_FILE
 from build_it.utils.utils import safe_load_yaml
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Public API
@@ -202,7 +200,7 @@ def _normalise_flavor(name: str, body: dict) -> FlavorInfo:
         whichever syntax was detected.
     """
     # ── App name ─────────────────────────────────────────────────────────────
-    app_name: Optional[str] = None
+    app_name: str | None = None
     app_block = body.get("app")
     if isinstance(app_block, dict):
         app_name = app_block.get("name")          # Syntax A
@@ -212,17 +210,17 @@ def _normalise_flavor(name: str, body: dict) -> FlavorInfo:
     # ── Android ──────────────────────────────────────────────────────────────
     android = body.get("android") or {}
     # Accept both applicationId (v2) and applicationIdSuffix (legacy suffix-only config)
-    android_id: Optional[str] = android.get("applicationId") or android.get(
+    android_id: str | None = android.get("applicationId") or android.get(
         "applicationIdSuffix"
     )
 
     # ── iOS ──────────────────────────────────────────────────────────────────
     ios = body.get("ios") or {}
-    ios_bundle: Optional[str] = ios.get("bundleId")
+    ios_bundle: str | None = ios.get("bundleId")
 
     # ── macOS ─────────────────────────────────────────────────────────────────
     macos = body.get("macos") or {}
-    macos_bundle: Optional[str] = macos.get("bundleId")
+    macos_bundle: str | None = macos.get("bundleId")
 
     return FlavorInfo(
         name=name,

@@ -23,12 +23,12 @@ from __future__ import annotations
 
 from enum import Enum
 
-from build_it.utils.constants import BUILD_TARGET_MAP
-
+from build_it.utils.constants import BUILD_TARGET_MAP, SYMBOLS_MAP
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Build target
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class BuildTarget(str, Enum):
     """
@@ -45,13 +45,13 @@ class BuildTarget(str, Enum):
     'ipa'
     """
 
-    APK        = "apk"
-    APPBUNDLE  = "appbundle"
-    IOS        = "ios"       # flutter build ipa
-    WEB        = "web"
-    MACOS      = "macos"
-    WINDOWS    = "windows"
-    LINUX      = "linux"
+    APK = "apk"
+    APPBUNDLE = "appbundle"
+    IOS = "ios"  # flutter build ipa
+    WEB = "web"
+    MACOS = "macos"
+    WINDOWS = "windows"
+    LINUX = "linux"
 
     def flutter_command(self) -> str:
         """
@@ -73,8 +73,19 @@ class BuildTarget(str, Enum):
         """
         return BUILD_TARGET_MAP.get(self.value, self.value)
 
+    def symbols_output_subdir(self) -> str:
+        """
+        Return the relative path inside ``build/`` where Flutter writes the
+        compiled symbols for this target.
+
+        The mapping is defined centrally in ``utils/constants.py`` so that
+        both the builder and external tooling can import it without touching
+        the enum.
+        """
+        return SYMBOLS_MAP.get(self.value, self.value)
+
     @staticmethod
-    def to_list() -> list["BuildTarget"]:
+    def to_list() -> list[BuildTarget]:
         """Return all ``BuildTarget`` members as an ordered list."""
         return list(BuildTarget._member_map_.values())
 
@@ -96,6 +107,7 @@ class BuildTarget(str, Enum):
 # ─────────────────────────────────────────────────────────────────────────────
 # Build status
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class BuildStatus(str, Enum):
     """
@@ -122,6 +134,7 @@ class BuildStatus(str, Enum):
 # Build type (Flutter build mode)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class BuildType(str, Enum):
     """
     Flutter build mode, passed as ``--release``, ``--profile``, or ``--debug``.
@@ -138,4 +151,4 @@ class BuildType(str, Enum):
 
     RELEASE = "release"
     PROFILE = "profile"
-    DEBUG   = "debug"
+    DEBUG = "debug"

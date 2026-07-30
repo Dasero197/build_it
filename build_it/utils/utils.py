@@ -15,12 +15,10 @@ safe_load_yaml(path)
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
 from build_it.utils.constants import PUBSPEC_FILE
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Flutter project detection
@@ -63,7 +61,7 @@ def has_flutter_project(project_root: Path = Path(".")) -> bool:
 # YAML helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def safe_load_yaml(path: Path) -> Optional[dict]:
+def safe_load_yaml(path: Path) -> dict | None:
     """
     Load a YAML file and return its parsed content.
 

@@ -37,5 +37,5 @@ Package layout
         └── guards.py        ← require_flutter_project() pre-flight check
 """
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __author__ = "Dayane S. R. Assogba"

@@ -33,16 +33,15 @@ BuildResult
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
 from build_it.core.enums import BuildStatus, BuildTarget
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Flavor metadata (from flavorizr)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class FlavorInfo(BaseModel):
     """
@@ -71,10 +70,10 @@ class FlavorInfo(BaseModel):
     """
 
     name: str
-    app_name: Optional[str] = None
-    android_application_id: Optional[str] = None
-    ios_bundle_id: Optional[str] = None
-    macos_bundle_id: Optional[str] = None
+    app_name: str | None = None
+    android_application_id: str | None = None
+    ios_bundle_id: str | None = None
+    macos_bundle_id: str | None = None
     raw: dict = Field(
         default_factory=dict,
         description="Original unmodified YAML body — kept for forward-compatibility.",
@@ -84,6 +83,7 @@ class FlavorInfo(BaseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 # Dart-define resolution
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class DartDefineConfig(BaseModel):
     """
@@ -128,6 +128,7 @@ class DartDefineConfig(BaseModel):
 # Per-flavor config (from .build_it.yaml)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class FlavorBuildConfig(BaseModel):
     """
     Per-flavor build settings read from ``.build_it.yaml``.
@@ -152,16 +153,17 @@ class FlavorBuildConfig(BaseModel):
         When ``None`` the Flutter default entry-point is used.
     """
 
-    targets: Optional[list[BuildTarget]] = None
+    targets: list[BuildTarget] | None = None
     dart_defines: dict[str, str] = Field(default_factory=dict)
     dart_define_files: list[Path] = Field(default_factory=list)
     extra_args: list[str] = Field(default_factory=list)
-    entry_point: Optional[Path] = None
+    entry_point: Path | None = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Global config (from .build_it.yaml)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class GlobalBuildConfig(BaseModel):
     """
@@ -194,11 +196,13 @@ class GlobalBuildConfig(BaseModel):
     dart_define_files: list[Path] = Field(default_factory=list)
     extra_args: list[str] = Field(default_factory=list)
     flavors: dict[str, FlavorBuildConfig] = Field(default_factory=dict)
+    flutter_project_version: str | None = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Build job (one flavor × one target)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class BuildJob(BaseModel):
     """
@@ -224,11 +228,13 @@ class BuildJob(BaseModel):
         Optional custom Dart entry-point (``--target``).
     """
 
-    flavor: Optional[str]
+    flavor: str | None
     target: BuildTarget
     dart_define: DartDefineConfig = Field(default_factory=DartDefineConfig)
     extra_args: list[str] = Field(default_factory=list)
-    entry_point: Optional[Path] = None
+    entry_point: Path | None = None
+    obfuscate: bool = True
+    flutter_project_version: str | None
 
     @property
     def label(self) -> str:
@@ -250,6 +256,7 @@ class BuildJob(BaseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 # Build result
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class BuildResult(BaseModel):
     """
@@ -279,7 +286,7 @@ class BuildResult(BaseModel):
     job: BuildJob
     status: BuildStatus
     duration_seconds: float = 0.0
-    output_dir: Optional[Path] = None
-    error_summary: Optional[str] = None
-    stdout_error: Optional[str] = None
-    stdout_output: Optional[str] = None
+    output_dir: Path | None = None
+    error_summary: str | None = None
+    stdout_error: str | None = None
+    stdout_output: str | None = None

@@ -14,20 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: '3.10'
-          cache: 'pip'
-          
+          version: "latest"
+          enable-cache: true
+
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-          
+        run: uv sync --extra dev
+
       - name: Run tests with pytest
-        run: pytest tests/ -v
+        run: uv run pytest tests/ -v
 
   build-pypi:
     name: Build & Publish to PyPI
@@ -35,22 +33,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: '3.10'
-          
-      - name: Install build tools
-        run: python -m pip install build twine
-        
+          version: "latest"
+
       - name: Build sdist and wheel
-        run: python -m build
-        
+        run: uv build
+
       - name: Publish package to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
 
   build-binaries:
     name: Build binaries (${{ matrix.os }})
@@ -67,23 +62,23 @@ jobs:
           - os: windows-latest
             suffix: '.exe'
             artifact_name: build_it-windows.exe
-            
+
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: '3.10'
-          cache: 'pip'
+          version: "latest"
+          enable-cache: true
 
       - name: Install build_it
-        run: pip install -e ".[dev]"
+        run: uv sync --extra dev
 
       - name: Build binary with PyInstaller
         run: |
-          pyinstaller --onefile --name build_it --distpath dist_bin --hidden-import "build_it.core.models" --hidden-import "build_it.core.parser" --hidden-import "build_it.core.config" --hidden-import "build_it.core.builder" --hidden-import "build_it.cli.main" --hidden-import "build_it.utils.guards" build_it/cli/main.py
+          uv run pyinstaller --onefile --name build_it --distpath dist_bin --hidden-import "build_it.core.models" --hidden-import "build_it.core.parser" --hidden-import "build_it.core.config" --hidden-import "build_it.core.builder" --hidden-import "build_it.cli.main" --hidden-import "build_it.utils.guards" build_it/cli/main.py
 
       - name: Rename binary for release
         run: |
@@ -102,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Download all binary artifacts
         uses: actions/download-artifact@v4
         with:

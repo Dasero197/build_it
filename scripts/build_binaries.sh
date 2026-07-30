@@ -9,7 +9,7 @@
 #   dist_bin/build_it.exe          ← Windows binary (cross-compile or run on Windows)
 #
 # Requirements:
-#   pip install pyinstaller  (or pip install -e ".[dev]")
+#   uv sync --extra dev  (installs pyinstaller along with the dev extras)
 
 set -euo pipefail
 
@@ -21,11 +21,14 @@ BINARY_NAME="build_it"
 
 cd "$PROJECT_ROOT"
 
+echo "==> Syncing dependencies with uv..."
+uv sync --extra dev
+
 echo "==> Cleaning previous dist..."
 rm -rf "$DIST_DIR" build/ *.spec
 
 echo "==> Building standalone binary with PyInstaller..."
-pyinstaller \
+uv run pyinstaller \
     --onefile \
     --name "$BINARY_NAME" \
     --distpath "$DIST_DIR" \

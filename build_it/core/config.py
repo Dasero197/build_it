@@ -64,18 +64,17 @@ generate_default_config(flavor_names)
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
+from build_it.core.enums import BuildTarget
 from build_it.core.models import (
     DartDefineConfig,
     FlavorBuildConfig,
     GlobalBuildConfig,
 )
-from build_it.core.enums import BuildTarget
 from build_it.utils.constants import CONFIG_FILE, PUBSPEC_FILE, REPO_URL
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Public API
@@ -112,6 +111,7 @@ def load_config(project_root: Path = Path(".")) -> GlobalBuildConfig:
 
     main_path = project_root / CONFIG_FILE
     sub_path = project_root / PUBSPEC_FILE
+    flutter_project_version = None
 
     # ── Primary: .build_it.yaml ───────────────────────────────────────────────
     if main_path.exists():
@@ -126,11 +126,18 @@ def load_config(project_root: Path = Path(".")) -> GlobalBuildConfig:
             )
 
     # ── Fallback: pubspec.yaml → build_it: key ───────────────────────────────
-    if raw is None and sub_path.exists():
+    if sub_path.exists():
         try:
             with sub_path.open("r", encoding="utf-8") as f:
                 result = yaml.safe_load(f)
-                raw = result.get("build_it", None) if isinstance(result, dict) else None
+                flutter_project_version = str(result.get("version"))
+
+                if raw is None:
+                    raw = (
+                        result.get("build_it", None)
+                        if isinstance(result, dict)
+                        else None
+                    )
         except Exception as exc:
             from rich.console import Console
 
@@ -138,12 +145,25 @@ def load_config(project_root: Path = Path(".")) -> GlobalBuildConfig:
                 f"[yellow]Warning: could not parse pubspec.yaml: {exc}[/yellow]"
             )
 
-    return _parse_config(raw, project_root) if raw is not None else GlobalBuildConfig()
+    else:
+        from rich.console import Console
+
+        Console().print(
+            "[yellow]Warning: could not parse pubspec.yaml: Unknow project version[/yellow]"
+        )
+
+    print(flutter_project_version)
+
+    return (
+        _parse_config(raw, flutter_project_version, project_root)
+        if raw is not None
+        else GlobalBuildConfig(flutter_project_version=flutter_project_version)
+    )
 
 
 def resolve_dart_defines(
     global_cfg: GlobalBuildConfig,
-    flavor_cfg: Optional[FlavorBuildConfig],
+    flavor_cfg: FlavorBuildConfig | None,
     cli_defines: dict[str, str],
     cli_define_files: list[Path],
 ) -> DartDefineConfig:
@@ -200,8 +220,8 @@ def resolve_dart_defines(
 
 def resolve_targets(
     global_cfg: GlobalBuildConfig,
-    flavor_cfg: Optional[FlavorBuildConfig],
-    cli_target: Optional[BuildTarget],
+    flavor_cfg: FlavorBuildConfig | None,
+    cli_target: BuildTarget | None,
 ) -> list[BuildTarget]:
     """
     Return the effective list of build targets for a flavor.
@@ -284,7 +304,9 @@ def generate_default_config(flavor_names: list[str]) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _parse_config(raw: dict[str, Any], root: Path) -> GlobalBuildConfig:
+def _parse_config(
+    raw: dict[str, Any], flutter_project_version: str, root: Path
+) -> GlobalBuildConfig:
     """
     Convert a raw YAML mapping into a :class:`GlobalBuildConfig`.
 
@@ -312,6 +334,7 @@ def _parse_config(raw: dict[str, Any], root: Path) -> GlobalBuildConfig:
             global_raw.get("dart_define_files"), root
         ),
         extra_args=_parse_extra_args(global_raw.get("extra_args")),
+        flutter_project_version=flutter_project_version,
     )
 
     for fname, fraw in (flavors_raw or {}).items():

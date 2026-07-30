@@ -30,9 +30,9 @@ Global options
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 import time
-from typing import Annotated, Optional
+from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.panel import Panel
@@ -57,7 +57,6 @@ from build_it.core.parser import load_flavors
 from build_it.utils.guards import require_flutter_project
 from build_it.utils.utils import has_flutter_project
 
-
 app = typer.Typer(
     name="build_it",
     help="Flutter multi-flavor build automation CLI.",
@@ -81,7 +80,7 @@ def version_callback(value: bool) -> None:
 @app.callback()
 def version(
     version: Annotated[
-        Optional[bool],
+        bool | None,
         typer.Option("--version", "-v", callback=version_callback, is_eager=True),
     ] = None,
 ) -> None:
@@ -167,13 +166,13 @@ def list_cmd() -> None:
 @app.command(name="build")
 def build_cmd(
     flavor: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "--flavor", "-f", help="Flavor name to build.  Omit to build all."
         ),
     ] = None,
     target: Annotated[
-        Optional[BuildTarget],
+        BuildTarget | None,
         typer.Option(
             "--target", "-t", help="Override build target (apk, appbundle, ios, web…)."
         ),
@@ -189,13 +188,13 @@ def build_cmd(
         ),
     ] = False,
     dart_define: Annotated[
-        Optional[list[str]],
+        list[str] | None,
         typer.Option(
             "--dart-define", "-D", help="Extra KEY=VALUE dart define (repeatable)."
         ),
     ] = None,
     dart_define_file: Annotated[
-        Optional[list[Path]],
+        list[Path] | None,
         typer.Option(
             "--dart-define-from-file",
             "-F",
@@ -203,7 +202,7 @@ def build_cmd(
         ),
     ] = None,
     build_type: Annotated[
-        Optional[BuildType],
+        BuildType | None,
         typer.Option(
             "--type", "-T", help="Build mode: release (default), profile, or debug."
         ),
@@ -212,6 +211,10 @@ def build_cmd(
         bool,
         typer.Option("--yes", "-y", help="Skip the confirmation prompt."),
     ] = False,
+    obfuscate: Annotated[
+        bool,
+        typer.Option("--obfuscate", "-o", help="Obfuscate the build binaries"),
+    ] = True,
 ) -> None:
     """
     Build one flavor, all flavors, or a no-flavor project.
@@ -241,7 +244,7 @@ def build_cmd(
     # ── Determine which flavors to build ─────────────────────────────────────
     if not flavors:
         # No-flavor mode — build once without --flavor
-        flavor_names: list[Optional[str]] = [None]
+        flavor_names: list[str | None] = [None]
     elif all_flavors or flavor is None:
         flavor_names = [f.name for f in flavors]
     else:
@@ -273,6 +276,8 @@ def build_cmd(
                     dart_define=dd,
                     extra_args=extra,
                     entry_point=entry,
+                    obfuscate=obfuscate,
+                    flutter_project_version=cfg.flutter_project_version,
                 )
             )
 
